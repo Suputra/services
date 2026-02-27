@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${EUID}" -ne 0 ]]; then
+  exec sudo "$0" "$@"
+fi
+
+read -r -p "Science United email: " SU_EMAIL
+read -r -s -p "Science United password: " SU_PASS
+echo
+
+boinccmd --acct_mgr attach https://scienceunited.org "$SU_EMAIL" "$SU_PASS"
+boinccmd --acct_mgr sync
+boinccmd --get_messages 0 | tail -n 60

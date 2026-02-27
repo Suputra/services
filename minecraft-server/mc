@@ -1,0 +1,11 @@
+#!/bin/bash
+# Minecraft RCON helper - run server commands easily
+# Usage: ./mc "command" or ./mc for interactive mode
+
+RCON_PASS="vohwDRvB4gtKmL2b"
+
+if [ -z "$1" ]; then
+    mcrcon -H localhost -p "$RCON_PASS" -t
+else
+    mcrcon -H localhost -p "$RCON_PASS" "$*"
+fi

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]; then
+    echo "Usage: add-link <name> <url> [description]"
+    echo "Example: add-link nas http://10.0.0.50:5000 \"Synology NAS\""
+    echo "Example: add-link gh https://github.com \"GitHub\""
+    echo ""
+    echo "This creates: y/name -> redirects to url"
+    exit 1
+fi
+
+NAME="$1"
+URL="$2"
+DESC="${3:-$URL}"
+
+CONFIG="/etc/nginx/sites-available/golinks"
+
+# Check if already exists
+if sudo grep -q "server_name ${NAME}.y;" "$CONFIG" 2>/dev/null; then
+    echo "Error: ${NAME}.y already exists"
+    exit 1
+fi
+
+# Add redirect server block before the HTTPS catch-all
+sudo sed -i "/# HTTPS catch-all/i\\
+# ${NAME}.y -> ${DESC}\\
+server {\\
+    listen 80;\\
+    listen [::]:80;\\
+    server_name ${NAME}.y;\\
+    return 302 ${URL}\\\$request_uri;\\
+}\\
+" "$CONFIG"
+
+# Test nginx config
+if ! sudo nginx -t 2>&1 | grep -q "ok"; then
+    echo "Error: nginx config invalid, reverting..."
+    sudo sed -i "/# ${NAME}.y/,/^}$/d" "$CONFIG"
+    exit 1
+fi
+
+# Add DNS entry on Pi
+ssh pi "sudo sed -i '/y\.lan/s/$/ ${NAME}.y/' /etc/hosts && sudo pihole reloaddns" > /dev/null 2>&1
+
+# Reload nginx
+sudo systemctl reload nginx
+
+echo "Added: y/${NAME} -> ${URL}"

@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "Go-Links:"
+echo ""
+grep -E "^# [a-z0-9-]+\.y " /etc/nginx/sites-available/golinks | while read line; do
+    name=$(echo "$line" | sed -n "s/^# \([a-z0-9-]*\)\.y.*/\1/p")
+    desc=$(echo "$line" | sed -n "s/.*-> \(.*\)/\1/p")
+    printf "  %-12s -> %s\n" "y/${name}" "$desc"
+done

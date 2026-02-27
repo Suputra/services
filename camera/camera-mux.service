@@ -1,0 +1,13 @@
+[Unit]
+Description=Camera Mux - Persistent MJPEG relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/home/saahas/services/camera
+ExecStart=/home/saahas/.local/bin/uv run camera_mux.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

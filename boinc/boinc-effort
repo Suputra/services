@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${EUID}" -ne 0 ]]; then
+  exec sudo "$0" "$@"
+fi
+
+PREFS_FILE=/etc/boinc-client/global_prefs_override.xml
+
+write_prefs() {
+  local max_ncpus_pct="$1"
+  local cpu_usage_limit="$2"
+  local suspend_cpu_usage="$3"
+
+  cat > "$PREFS_FILE" <<XML
+<global_preferences>
+  <run_if_user_active>1</run_if_user_active>
+  <run_gpu_if_user_active>1</run_gpu_if_user_active>
+  <max_ncpus_pct>${max_ncpus_pct}</max_ncpus_pct>
+  <cpu_usage_limit>${cpu_usage_limit}</cpu_usage_limit>
+  <suspend_cpu_usage>${suspend_cpu_usage}</suspend_cpu_usage>
+  <ram_max_used_busy_pct>90.0</ram_max_used_busy_pct>
+  <ram_max_used_idle_pct>90.0</ram_max_used_idle_pct>
+  <vm_max_used_pct>90.0</vm_max_used_pct>
+</global_preferences>
+XML
+
+  boinccmd --read_global_prefs_override >/dev/null
+}
+
+show_status() {
+  boinccmd --get_cc_status
+  echo "---"
+  boinccmd --get_messages 0 | tail -n 30 | sed -n '/Preferences:/,$p' | tail -n 16
+}
+
+cmd="${1:-status}"
+
+case "$cmd" in
+  low)
+    write_prefs 30.0 60.0 35.0
+    boinccmd --set_run_mode always 0 >/dev/null
+    boinccmd --set_gpu_mode always 0 >/dev/null
+    boinccmd --set_network_mode always 0 >/dev/null
+    echo "Set BOINC effort: low"
+    show_status
+    ;;
+  medium)
+    write_prefs 60.0 85.0 60.0
+    boinccmd --set_run_mode always 0 >/dev/null
+    boinccmd --set_gpu_mode always 0 >/dev/null
+    boinccmd --set_network_mode always 0 >/dev/null
+    echo "Set BOINC effort: medium"
+    show_status
+    ;;
+  high)
+    write_prefs 100.0 100.0 100.0
+    boinccmd --set_run_mode always 0 >/dev/null
+    boinccmd --set_gpu_mode always 0 >/dev/null
+    boinccmd --set_network_mode always 0 >/dev/null
+    echo "Set BOINC effort: high"
+    show_status
+    ;;
+  pause)
+    boinccmd --set_run_mode never 0 >/dev/null
+    boinccmd --set_gpu_mode never 0 >/dev/null
+    echo "Paused BOINC compute"
+    show_status
+    ;;
+  resume)
+    boinccmd --set_run_mode always 0 >/dev/null
+    boinccmd --set_gpu_mode always 0 >/dev/null
+    echo "Resumed BOINC compute"
+    show_status
+    ;;
+  for)
+    # boinc-effort for <minutes>
+    mins="${2:-}"
+    if [[ -z "${mins}" || ! "${mins}" =~ ^[0-9]+$ ]]; then
+      echo "Usage: boinc-effort for <minutes>"
+      exit 2
+    fi
+    secs=$((mins * 60))
+    boinccmd --set_run_mode never "$secs" >/dev/null
+    boinccmd --set_gpu_mode never "$secs" >/dev/null
+    echo "Paused BOINC compute for ${mins} minute(s)"
+    show_status
+    ;;
+  custom)
+    # boinc-effort custom <max_ncpus_pct> <cpu_usage_limit> <suspend_cpu_usage>
+    a="${2:-}"; b="${3:-}"; c="${4:-}"
+    if [[ -z "$a" || -z "$b" || -z "$c" ]]; then
+      echo "Usage: boinc-effort custom <max_ncpus_pct> <cpu_usage_limit> <suspend_cpu_usage>"
+      exit 2
+    fi
+    write_prefs "$a" "$b" "$c"
+    boinccmd --set_run_mode always 0 >/dev/null
+    boinccmd --set_gpu_mode always 0 >/dev/null
+    boinccmd --set_network_mode always 0 >/dev/null
+    echo "Set BOINC effort: custom (${a}/${b}/${c})"
+    show_status
+    ;;
+  status)
+    show_status
+    ;;
+  *)
+    cat <<USAGE
+Usage:
+  boinc-effort status
+  boinc-effort low|medium|high
+  boinc-effort pause|resume
+  boinc-effort for <minutes>
+  boinc-effort custom <max_ncpus_pct> <cpu_usage_limit> <suspend_cpu_usage>
+USAGE
+    exit 2
+    ;;
+esac

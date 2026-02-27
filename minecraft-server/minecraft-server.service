@@ -1,0 +1,23 @@
+[Unit]
+Description=Minecraft Modded Server
+After=network.target
+
+[Service]
+Type=simple
+User=saahas
+WorkingDirectory=/home/saahas/minecraft-server
+
+ExecStart=/home/saahas/minecraft-server/run.sh nogui
+ExecStop=/usr/bin/mcrcon -H localhost -p vohwDRvB4gtKmL2b stop
+
+Restart=on-failure
+RestartSec=10
+
+TimeoutStartSec=600
+TimeoutStopSec=120
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

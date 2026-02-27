@@ -1,0 +1,77 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]; then
+    echo "Usage: add-file <name> <file-or-directory>"
+    echo "Example: add-file iso ~/ubuntu.iso        # Single file: y/iso downloads it"
+    echo "Example: add-file share ~/shared/         # Directory: y/share lists files"
+    echo ""
+    echo "This creates: y/name -> downloadable file(s)"
+    exit 1
+fi
+
+NAME="$1"
+SOURCE="$2"
+DESC="File download"
+
+CONFIG="/etc/nginx/sites-available/golinks"
+FILE_DIR="/var/www/golinks/files/${NAME}"
+
+# Check if already exists
+if sudo grep -q "server_name ${NAME}.y;" "$CONFIG" 2>/dev/null; then
+    echo "Error: ${NAME}.y already exists"
+    exit 1
+fi
+
+# Create file directory and copy content
+mkdir -p "$FILE_DIR"
+
+if [ -d "$SOURCE" ]; then
+    # Directory - copy contents
+    cp -r "$SOURCE"/* "$FILE_DIR/" 2>/dev/null || cp -r "$SOURCE"/. "$FILE_DIR/"
+    DESC="File listing"
+    AUTOINDEX="autoindex on;"
+elif [ -f "$SOURCE" ]; then
+    # Single file - copy it
+    FILENAME=$(basename "$SOURCE")
+    cp "$SOURCE" "$FILE_DIR/$FILENAME"
+    DESC="File: $FILENAME"
+    AUTOINDEX=""
+else
+    echo "Error: Source not found: $SOURCE"
+    exit 1
+fi
+
+# Add HTTP server block
+sudo sed -i "/# Main redirector/i\\
+# ${NAME}.y -> ${DESC}\\
+server {\\
+    listen 80;\\
+    listen [::]:80;\\
+    server_name ${NAME}.y;\\
+\\
+    root ${FILE_DIR};\\
+    ${AUTOINDEX}\\
+\\
+    location / {\\
+        try_files \$uri \$uri/ =404;\\
+        add_header Content-Disposition 'attachment';\\
+    }\\
+}\\
+" "$CONFIG"
+
+# Test nginx config
+if ! sudo nginx -t 2>&1 | grep -q "ok"; then
+    echo "Error: nginx config invalid, reverting..."
+    sudo sed -i "/# ${NAME}.y/,/^}$/d" "$CONFIG"
+    rm -rf "$FILE_DIR"
+    exit 1
+fi
+
+# Add DNS entry on Pi
+ssh pi "sudo sed -i '/y\.lan/s/$/ ${NAME}.y/' /etc/hosts && sudo pihole reloaddns" > /dev/null 2>&1
+
+# Reload nginx
+sudo systemctl reload nginx
+
+echo "Added: y/${NAME} -> serves files from ${FILE_DIR}"
+[ -n "$AUTOINDEX" ] && echo "       Directory listing enabled"
