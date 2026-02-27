@@ -31,10 +31,6 @@ sudo journalctl -u minecraft-server -f
 ./mc "list"
 ```
 
-## Note
-
-The RCON password is hardcoded in `mc` and `minecraft-server.service`. It's local-only (bound to localhost) so this is acceptable for a private repo.
-
 ## Setup
 
 1. Install Java 17

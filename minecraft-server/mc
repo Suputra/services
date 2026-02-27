@@ -2,7 +2,9 @@
 # Minecraft RCON helper - run server commands easily
 # Usage: ./mc "command" or ./mc for interactive mode
 
-RCON_PASS="vohwDRvB4gtKmL2b"
+# shellcheck source=/dev/null
+source "$(dirname "$(realpath "$0")")/../.env"
+RCON_PASS="${RCON_PASSWORD:?RCON_PASSWORD not set in .env}"
 
 if [ -z "$1" ]; then
     mcrcon -H localhost -p "$RCON_PASS" -t
