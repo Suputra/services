@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=saahas
 WorkingDirectory=/home/saahas/minecraft-server
-EnvironmentFile=/home/saahas/services/.env
+EnvironmentFile=/home/saahas/.env
 
 ExecStart=/home/saahas/minecraft-server/run.sh nogui
 ExecStop=/usr/bin/mcrcon -H localhost -p ${RCON_PASSWORD} stop

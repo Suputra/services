@@ -3,8 +3,8 @@
 # Usage: ./mc "command" or ./mc for interactive mode
 
 # shellcheck source=/dev/null
-source "$(dirname "$(realpath "$0")")/../.env"
-RCON_PASS="${RCON_PASSWORD:?RCON_PASSWORD not set in .env}"
+source "$HOME/.env"
+RCON_PASS="${RCON_PASSWORD:?RCON_PASSWORD not set in ~/.env}"
 
 if [ -z "$1" ]; then
     mcrcon -H localhost -p "$RCON_PASS" -t
