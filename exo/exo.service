@@ -1,0 +1,18 @@
+[Unit]
+Description=Exo Distributed AI Inference
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ns
+WorkingDirectory=/home/ns/services/exo/repo
+ExecStart=/home/ns/services/exo/repo/.venv/bin/exo
+Restart=on-failure
+RestartSec=10
+
+# Model cache
+Environment=HF_HOME=/home/ns/.cache/huggingface
+
+[Install]
+WantedBy=multi-user.target

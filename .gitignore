@@ -27,3 +27,6 @@ logs/
 libraries/
 *.jar
 *.jar.log
+
+# Exo (cloned repo + build artifacts)
+exo/repo/
